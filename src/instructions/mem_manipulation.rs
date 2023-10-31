@@ -10,6 +10,7 @@ pub struct MemManipulation {
     reg1: u8,
     reg2: u8,
     imm1: u32,
+    load: bool
 }
 
 impl MemManipulation {
@@ -42,7 +43,7 @@ impl MemManipulation {
                 imm1_number
             } else { return Err(MissingImm1); };
 
-            Ok(Self { instruction_number, reg1: reg1_number, reg2: reg2_number, imm1: imm1_number })
+            Ok(Self { instruction_number, reg1: reg1_number, reg2: reg2_number, imm1: imm1_number, load })
         } else {
             Err(RegexDoesNotMatch)
         };
@@ -51,6 +52,11 @@ impl MemManipulation {
 
 impl Display for MemManipulation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1)))
+        if self.load {
+            write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1)))
+        } else {
+            write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg2, self.reg1, imm_dec_to_hex!(self.imm1)))
+        }
+
     }
 }
