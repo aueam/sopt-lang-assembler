@@ -1,3 +1,5 @@
+mod instructions;
+
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -5,40 +7,11 @@ use std::process::exit;
 use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
 use regex::Regex;
-
-// let mut code: String = "01 ".to_owned();
-// if let Some(captures) = add.captures(s) {
-//     if let Some(reg1) = captures.get(1) {
-//         if reg1.as_str() == "" { return Err(anyhow!(format!("{problem}missing \"reg1\" argument").red())); }
-//         let arg = reg1.as_str().trim_start_matches("reg");
-//         let reg = arg.parse::<i8>().map_err(|_| anyhow!(format!("{problem}reg must contain number (1-5)").red()))?;
-//         if reg == 0 {
-//             return Err(anyhow!(format!("{problem}you can not write into reg0").red()));
-//         } else if reg < 0 || reg > 5 {
-//             return Err(anyhow!(format!("{problem}invalid reg number, reg must contain number (1-5)").red()));
-//         }
-//         code.push_str(arg);
-//     }
-//     if let Some(reg2) = captures.get(2) {
-//         if reg2.as_str() == "" { return Err(anyhow!(format!("{problem}missing \"reg2\" argument").red())); }
-//         let arg = reg2.as_str().trim_start_matches("reg");
-//         let reg = arg.parse::<i8>().map_err(|_| anyhow!(format!("{problem}reg must contain number (0-5)").red()))?;
-//         if reg < 0 || reg > 5 {
-//             return Err(anyhow!(format!("{problem}invalid reg number, reg must contain number (1-5)").red()));
-//         }
-//         code.push_str(arg);
-//         code.push(' ');
-//     }
-//     if let Some(imm) = captures.get(3) {
-//         if imm.as_str() == "" { return Err(anyhow!(format!("{problem}missing \"imm\" argument").red())); }
-//         let imm = imm.as_str().parse::<i32>().map_err(|_| anyhow!(format!("{problem}reg must contain number (0-5)").red()))?;
-//         if imm < 0 || imm > 65535 {
-//             return Err(anyhow!(format!("{problem}invalid imm, supported numbers: 0-65535").red()));
-//         }
-//         code.push_str(&format!("{:02X} {:02X}", (imm >> 8) & 0xFF, imm & 0xFF));
-//     }
-// } else { return Err(anyhow!(format!("{problem}instruction should be ADD but isn't it?").red())); }
-// output.push_str(&format!("{code} ; {raw_instruction_and_comment}\n"))
+use crate::instructions::{Instruction, ParseError};
+use crate::instructions::helpers::make_instruction_number;
+use crate::instructions::jumps::Jump;
+use crate::instructions::mem_manipulation::MemManipulation;
+use crate::instructions::reg_manipulation::RegManipulation;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -70,25 +43,71 @@ fn main() -> Result<()> {
         return Err(anyhow!(".tik file already exists"));
     }
 
-    let nop = Regex::new(r"NOP").context("can not create regex for NOP")?;
+    let add_regexes = vec![
+        Regex::new(r"(.*)\+=(.*)\+(.*)").context("can not create regex for ADD1")?,
+        Regex::new(r"^ADD\((.*),(.*),(.*)\)").context("can not create regex for ADD2")?,
+        Regex::new(r"^ADD(.*),(.*),(.*)").context("can not create regex for ADD3")?,
+    ];
+    let sub_regexes = vec![
+        Regex::new(r"(.*)-=(.*)\+(.*)").context("can not create regex for SUB1")?,
+        Regex::new(r"^SUB\((.*),(.*),(.*)\)").context("can not create regex for SUB2")?,
+        Regex::new(r"^SUB(.*),(.*),(.*)").context("can not create regex for SUB3")?,
+    ];
+    let mul_regexes = vec![
+        Regex::new(r"(.*)\*=(.*)\+(.*)").context("can not create regex for MUL1")?,
+        Regex::new(r"^MUL\((.*),(.*),(.*)\)").context("can not create regex for MUL2")?,
+        Regex::new(r"^MUL(.*),(.*),(.*)").context("can not create regex for MUL3")?,
+    ];
 
-    let add = Regex::new(r"(.*)\+=(.*)\+(.*)").context("can not create regex for ADD")?;
-    let sub = Regex::new(r"(.*)-=(.*)\+(.*)").context("can not create regex for SUB")?;
-    let mul = Regex::new(r"(.*)\*=(.*)\+(.*)").context("can not create regex for MUL")?;
+    let load_regexes = vec![
+        // Regex::new(r"(.*)=mem\[(.*)\+(.*)]").context("can not create regex for LOAD1")?, // TODO: Fix regexes?
+        Regex::new(r"^LOAD\((.*),(.*),(.*)\)").context("can not create regex for LOAD2")?,
+        Regex::new(r"^LOAD(.*),(.*),(.*)").context("can not create regex for LOAD3")?,
+    ];
+    let store_regexes = vec![
+        // Regex::new(r"mem\[(.*)\+(.*)]=(.*)").context("can not create regex for STORE1")?, // TODO: Fix regexes?
+        Regex::new(r"^STORE\((.*),(.*),(.*)\)").context("can not create regex for STORE2")?,
+        Regex::new(r"^STORE(.*),(.*),(.*)").context("can not create regex for STORE3")?,
+    ];
 
-    let load = Regex::new(r"(.*)=mem\[(.*)\+(.*)]").context("can not create regex for LOAD")?;
-    let store = Regex::new(r"mem\[(.*)\+(.*)]=(.*)").context("can not create regex for STORE")?;
+    let mov_regexes = vec![
+        Regex::new(r"([^*+-]+)=(.*)\+([^=]+)").context("can not create regex for MOV1")?, // TODO: Is this correct?
+        Regex::new(r"^MOV\((.*),(.*),(.*)\)").context("can not create regex for MOV2")?,
+        Regex::new(r"^MOV(.*),(.*),(.*)").context("can not create regex for MOV3")?,
+    ];
 
-    let mov = Regex::new(r"(.*)(!.*[+\-*])=(.*)\+(.*)").context("can not create regex for MOV")?;
+    let jump_regexes = vec![
+        Regex::new(r"^if\((.*)==(.*)\)pc\+=(.*)").context("can not create regex for JUMP1")?,
+        Regex::new(r"^JUMP\((.*),(.*),(.*)\)").context("can not create regex for JUMP2")?,
+        Regex::new(r"^JUMP(.*),(.*),(.*)").context("can not create regex for JUMP3")?,
+    ];
+    let revjump_regexes = vec![
+        Regex::new(r"^if\((.*)==(.*)\)pc-=(.*)").context("can not create regex for REVJUMP1")?,
+        Regex::new(r"^REVJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVJUMP2")?,
+        Regex::new(r"^REVJUMP(.*),(.*),(.*)").context("can not create regex for REVJUMP3")?,
+    ];
 
-    let jump = Regex::new(r"if\((.*)==(.*)\)pc+=(.*)").context("can not create regex for JUMP")?;
-    let revjump = Regex::new(r"if\((.*)==(.*)\)pc-=(.*)").context("can not create regex for REVJUMP")?;
+    let ltjump_regexes = vec![
+        Regex::new(r"^if\((.*)<(.*)\)pc\+=(.*)").context("can not create regex for LTJUMP1")?,
+        Regex::new(r"^LTJUMP\((.*),(.*),(.*)\)").context("can not create regex for LTJUMP2")?,
+        Regex::new(r"^LTJUMP(.*),(.*),(.*)").context("can not create regex for LTJUMP3")?,
+    ];
+    let revltjump_regexes = vec![
+        Regex::new(r"^if\((.*)<(.*)\)pc-=(.*)").context("can not create regex for REVLTJUMP1")?,
+        Regex::new(r"^REVLTJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVLTJUMP2")?,
+        Regex::new(r"^REVLTJUMP(.*),(.*),(.*)").context("can not create regex for REVLTJUMP3")?,
+    ];
 
-    let ltjump = Regex::new(r"if\((.*)<(.*)\)pc+=(.*)").context("can not create regex for LTJUMP")?;
-    let revltjump = Regex::new(r"if\((.*)<(.*)\)pc-=(.*)").context("can not create regex for REVLTJUMP")?;
-
-    let neqjump = Regex::new(r"if\((.*)<(.*)\)pc+=(.*)").context("can not create regex for NEQJUMP")?;
-    let revneqjump = Regex::new(r"if\((.*)<(.*)\)pc-=(.*)").context("can not create regex for REVNEQJUMP")?;
+    let neqjump_regexes = vec![
+        Regex::new(r"^if\((.*)!=(.*)\)pc\+=(.*)").context("can not create regex for NEQJUMP1")?,
+        Regex::new(r"^NEQJUMP\((.*),(.*),(.*)\)").context("can not create regex for NEQJUMP2")?,
+        Regex::new(r"^NEQJUMP(.*),(.*),(.*)").context("can not create regex for NEQJUMP3")?,
+    ];
+    let revneqjump_regexes = vec![
+        Regex::new(r"^if\((.*)!=(.*)\)pc-=(.*)").context("can not create regex for REVNEQJUMP1")?,
+        Regex::new(r"^REVNEQJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVNEQJUMP2")?,
+        Regex::new(r"^REVNEQJUMP(.*),(.*),(.*)").context("can not create regex for REVNEQJUMP3")?,
+    ];
 
     let setimmlow = Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW")?;
     let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
@@ -107,62 +126,63 @@ fn main() -> Result<()> {
             Some((instruction, comment)) => (instruction, Some(comment))
         };
 
-        let problem = format!("\nyou have problem in your program on line:\n\n{index}. {raw_instruction_and_comment}\n\nproblem: ");
+        let problem_line = format!("{}. {raw_instruction_and_comment}", index + 1);
 
-        macro_rules! check_arg {
-            ($arg:expr, $min:expr, $max:expr, &mut $code:expr, $msg:expr) => {
-                if $arg == "" { return Err(anyhow!(format!("{problem}missing \"reg1\" argument").red())); }
-                let arg = $arg.trim_start_matches("reg");
-                let reg = arg.parse::<i8>()
-                    .map_err(|_| anyhow!(format!("{problem}reg must contain number ({}-{})", $min, $max).red()))?;
-                if reg < $min || reg > $max {
-                    return Err(anyhow!(format!("{problem}{}", $msg).red()));
+        macro_rules! process_reg_instruction {
+            ($instruction:expr, $matched_regex:expr, $param:expr, $output:expr, $problem_line:expr) => {
+                match RegManipulation::parse($instruction, $matched_regex, $param) {
+                    Ok(instruction) => $output.push_str(&format!("{} ; {}\n", instruction, raw_instruction_and_comment)),
+                    Err(err) => return Err(anyhow!(build_error(err, $problem_line, &$param))),
                 }
-                $code.push_str(arg);
             };
         }
 
-        match instruction {
-            s if nop.is_match(s) => output.push_str(&format!("69 00 00 00 ; {raw_instruction_and_comment}\n")),
-            s if add.is_match(s) => {
-                let mut code = String::from("01 ");
-
-                if let Some(captures) = add.captures(s) {
-                    check_arg!(captures.get(1).map(|r| r.as_str()).unwrap_or(""), 1, 5, &mut code, "invalid reg number, reg must contain number (1-5)");
-                    check_arg!(captures.get(2).map(|r| r.as_str()).unwrap_or(""), 0, 5, &mut code, "invalid reg number, reg must contain number (0-5)");
-                    code.push(' ');
-
-                    if let Some(imm) = captures.get(3) {
-                        let imm = imm.as_str().parse::<i32>()
-                            .map_err(|_| anyhow!(format!("{problem}reg must contain number (0-5)").red()))?;
-                        if imm < 0 || imm > 65535 {
-                            return Err(anyhow!(format!("{problem}invalid imm, supported numbers: 0-65535").red()));
-                        }
-                        code.push_str(&format!("{:02X} {:02X}", (imm >> 8) & 0xFF, imm & 0xFF));
-                    }
-                } else {
-                    return Err(anyhow!(format!("{problem}instruction should be ADD but isn't it?").red()));
+        macro_rules! process_jump_instruction {
+            ($instruction:expr, $matched_regex:expr, $param:expr, $output:expr, $problem_line:expr) => {
+                match Jump::parse($instruction, $matched_regex, $param) {
+                    Ok(jump) => $output.push_str(&format!("{} ; {}\n", jump, raw_instruction_and_comment)),
+                    Err(err) => return Err(anyhow!(build_error(err, $problem_line, &$param))),
                 }
+            };
+        }
 
-                output.push_str(&format!("{code} ; {raw_instruction_and_comment}\n"));
+        if instruction == "" {
+            output.push_str(&format!("{}\n", raw_instruction_and_comment));
+        } else if instruction == "NOP" {
+            output.push_str(&format!("69 00 00 00 ; {raw_instruction_and_comment}\n"));
+        } else if let Some(matched_regex) = matches(instruction, &add_regexes) {
+            process_reg_instruction!(instruction, matched_regex, 1, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &sub_regexes) {
+            process_reg_instruction!(instruction, matched_regex, 2, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &mul_regexes) {
+            process_reg_instruction!(instruction, matched_regex, 3, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &mov_regexes) {
+            process_reg_instruction!(instruction, matched_regex, 7, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &load_regexes) {
+            match MemManipulation::parse(instruction, matched_regex, 5, true) {
+                Ok(load) => output.push_str(&format!("{} ; {}\n", load, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &5))),
             }
-            s if sub.is_match(s) => unimplemented!(),
-            s if mul.is_match(s) => unimplemented!(),
-            s if load.is_match(s) => unimplemented!(),
-            s if store.is_match(s) => unimplemented!(),
-            s if mov.is_match(s) => unimplemented!(),
-            s if jump.is_match(s) => unimplemented!(),
-            s if revjump.is_match(s) => unimplemented!(),
-            s if ltjump.is_match(s) => unimplemented!(),
-            s if revltjump.is_match(s) => unimplemented!(),
-            s if neqjump.is_match(s) => unimplemented!(),
-            s if revneqjump.is_match(s) => unimplemented!(),
-            s if setimmlow.is_match(s) => unimplemented!(),
-            s if setimmhigh.is_match(s) => unimplemented!(),
-            s if teleport.is_match(s) => unimplemented!(),
-            s if bomb.is_match(s) => unimplemented!(),
-            s if s == "" => output.push_str(&format!("{raw_instruction_and_comment}\n")),
-            _ => return Err(anyhow!(format!("{problem}unknown instruciton").red())),
+        } else if let Some(matched_regex) = matches(instruction, &store_regexes) {
+            match MemManipulation::parse(instruction, matched_regex, 6, false) {
+                Ok(store) => output.push_str(&format!("{} ; {}\n", store, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &6))),
+            }
+        } else if let Some(matched_regex) = matches(instruction, &jump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 10, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &revjump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 11, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &ltjump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 12, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &revltjump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 13, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &neqjump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 14, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &revneqjump_regexes) {
+            process_jump_instruction!(instruction, matched_regex, 15, output, problem_line);
+        } else {
+            println!("{}", instruction);
+            panic!("unknown instruction");
         }
     }
 
@@ -171,4 +191,79 @@ fn main() -> Result<()> {
     tik_file.write_all(output.as_bytes()).context("failed to write program into .tik file")?;
 
     Ok(())
+}
+
+fn matches(instruction: &str, regexes: &Vec<Regex>) -> Option<Regex> {
+    for regex in regexes {
+        if regex.is_match(instruction) {
+            return Some(regex.clone());
+        }
+    }
+    None
+}
+
+fn build_error(err: ParseError, problem_line: String, instruction: &u8) -> String {
+    let mut problem = String::from("in your program on line:\n\n");
+
+    // println!("{:?}", err);
+    problem.push_str(&match err {
+        ParseError::CannotWriteIntoReg0 => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, "reg0", &"reg0".red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::RegexDoesNotMatch | ParseError::MissingReg1 | ParseError::MissingReg2 | ParseError::MissingImm1 | ParseError::MissingImm2 => {
+            format!("{}\n\nproblem: {}", problem_line, err.to_string().red().to_string())
+        }
+        ParseError::UnsupportedReg1(ref invalid_reg, _, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedReg2(ref invalid_reg, _, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_last(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedImm1(ref invalid_imm, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedImm2(ref invalid_imm, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_last(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+    });
+    problem.push_str(&format!("\ninstruction: {}", make_instruction_number(*instruction).unwrap()));
+    problem.clone()
+}
+
+fn replace_first(input: &str, from: &str, to: &str) -> String {
+    if let Some(index) = input.find(from) {
+        let (before, after) = input.split_at(index);
+        format!("{}{}{}", before, to, &after[from.len()..])
+    } else {
+        input.to_string()
+    }
+}
+
+fn replace_last(input: &str, from: &str, to: &str) -> String {
+    if let Some(index) = input.rfind(from) {
+        let (before, after) = input.split_at(index);
+        format!("{}{}{}", before, to, &after[from.len()..])
+    } else {
+        input.to_string()
+    }
 }
