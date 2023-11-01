@@ -14,7 +14,7 @@ pub struct MemManipulation {
 }
 
 impl MemManipulation {
-    pub(crate) fn parse(instruction: &str, regex: Regex, instruction_number: u8, load: bool) -> Result<Self, ParseError> {
+    pub fn parse(instruction: &str, regex: Regex, instruction_number: u8, load: bool) -> Result<Self, ParseError> {
         return if let Some(captures) = regex.captures(instruction) {
             let reg1_number = if let Some(reg1) = captures.get(1) {
                 let reg1 = reg1.as_str().to_owned();
@@ -52,11 +52,11 @@ impl MemManipulation {
 
 impl Display for MemManipulation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.load {
-            write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1)))
-        } else {
-            write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg2, self.reg1, imm_dec_to_hex!(self.imm1)))
-        }
-
+        write!(f, "{} {}{} {}",
+               make_instruction_number(self.instruction_number).unwrap(),
+               if self.load { self.reg1 } else { self.reg2 },
+               if self.load { self.reg2 } else { self.reg1 },
+               imm_dec_to_hex!(self.imm1)
+        )
     }
 }

@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     }
 
     if !tik_raw_file.ends_with(".tik") {
-        return Err(anyhow!("input file must end with .tik\n:)"));
+        return Err(anyhow!("output file must end with .tik\n:)"));
     }
 
     let mut sop_file = File::open(sop_raw_file).context("can not find input file")?;
@@ -246,8 +246,8 @@ fn build_error(err: ParseError, problem_line: String, instruction: &u8) -> Strin
             )
         }
     });
-    problem.push_str(&format!("\ninstruction: {}", make_instruction_number(*instruction).unwrap()));
-    problem.clone()
+    problem.push_str(&format!("\ninstruction found: {}", make_instruction_number(*instruction).unwrap()));
+    problem
 }
 
 fn replace_first(input: &str, from: &str, to: &str) -> String {
