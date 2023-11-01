@@ -58,9 +58,3 @@ you can generate byte code:
 01 10 00 01 ; reg1 += reg0 + 1
 11 00 00 02 ; if (reg0 == reg0) pc -= 2
 ```
-
-## Error handling examples
-
-![img.png](img.png)
-
-![img_1.png](img_1.png)
