@@ -1,6 +1,6 @@
 # Sopt lang & assembler
 
-This is unofficial implementation of assembler for sopt lang.
+This is unofficial implementation of assembler for Sopt lang.
 
 Sopt lang is custom language made for the [FIKS competition](https://fiks.fit.cvut.cz/).
 
@@ -18,6 +18,26 @@ Sopt lang is custom language made for the [FIKS competition](https://fiks.fit.cv
 2. use the tool with `./sopt-lang-assembler program.sop output.tik`
 3. submit `output.tik`
 4. earn 10 points :)
+
+# Available instructions
+
+- [x] NOP
+- [x] ADD
+- [x] SUB
+- [x] MUL
+- [x] LOAD
+- [x] STORE
+- [x] MOV
+- [x] JUMP
+- [x] REVJUMP
+- [x] LTJUMP
+- [x] REVLTJUMP
+- [x] NEQJUMP
+- [x] REVNEQJUMP
+- [ ] SETIMMLOW
+- [ ] SETIMMHIGH
+- [ ] TELEPORT
+- [ ] BOMB
 
 # Examples
 
@@ -44,10 +64,3 @@ you can generate byte code:
 ![img.png](img.png)
 
 ![img_1.png](img_1.png)
-
-
-
-
-
-
- 
