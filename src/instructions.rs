@@ -58,38 +58,38 @@ pub fn build_error(err: ParseError, problem_line: String, instruction: &u8) -> S
             format!(
                 "{}\n\nproblem: {}",
                 replace_first(&problem_line, "reg0", &"reg0".red().to_string()),
-                err.to_string().red().to_string()
+                err.to_string().red()
             )
         }
         ParseError::RegexDoesNotMatch | ParseError::MissingReg1 | ParseError::MissingReg2 | ParseError::MissingImm1 | ParseError::MissingImm2 => {
-            format!("{}\n\nproblem: {}", problem_line, err.to_string().red().to_string())
+            format!("{}\n\nproblem: {}", problem_line, err.to_string().red())
         }
         ParseError::UnsupportedReg1(ref invalid_reg, _, _) => {
             format!(
                 "{}\n\nproblem: {}",
-                replace_first(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
-                err.to_string().red().to_string()
+                replace_first(&problem_line, invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red()
             )
         }
         ParseError::UnsupportedReg2(ref invalid_reg, _, _) => {
             format!(
                 "{}\n\nproblem: {}",
-                replace_last(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
-                err.to_string().red().to_string()
+                replace_last(&problem_line, invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red()
             )
         }
         ParseError::UnsupportedImm1(ref invalid_imm, _) => {
             format!(
                 "{}\n\nproblem: {}",
-                replace_first(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
-                err.to_string().red().to_string()
+                replace_first(&problem_line, invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red()
             )
         }
         ParseError::UnsupportedImm2(ref invalid_imm, _) => {
             format!(
                 "{}\n\nproblem: {}",
-                replace_last(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
-                err.to_string().red().to_string()
+                replace_last(&problem_line, invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red()
             )
         }
     });

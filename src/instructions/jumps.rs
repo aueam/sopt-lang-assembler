@@ -49,6 +49,6 @@ impl Instruction for Jump {
 
 impl Display for Jump {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1)))
+        write!(f, "{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1))
     }
 }

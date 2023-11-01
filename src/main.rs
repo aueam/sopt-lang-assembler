@@ -42,7 +42,7 @@ fn main() -> Result<()> {
     let mut input = String::new();
     sop_file.read_to_string(&mut input).context("cannot read input file to string")?;
 
-    if let Ok(_) = File::open(tik_raw_file) {
+    if File::open(tik_raw_file).is_ok() {
         return Err(anyhow!(format!("{} file already exists", tik_raw_file)));
     }
 
@@ -112,8 +112,8 @@ fn main() -> Result<()> {
         Regex::new(r"^REVNEQJUMP(.*),(.*),(.*)").context("can not create regex for REVNEQJUMP3")?,
     ];
 
-    let setimmlow = Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW")?;
-    let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
+    // let setimmlow = Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW")?;
+    // let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
 
     let teleport_regexes = vec![
         Regex::new(r"^TELEPORT\((.*),(.*)\)").context("can not create regex for TELEPORT")?,
@@ -125,14 +125,14 @@ fn main() -> Result<()> {
         Regex::new(r"^BOMB(.*)").context("can not create regex for BOMB1")?
     ];
 
-    let instructions: Vec<&str> = input.split("\n").collect();
+    let instructions: Vec<&str> = input.split('\n').collect();
     let mut output = String::new();
 
     for (index, raw_instruction_and_comment) in instructions.iter().enumerate() {
-        let instruction_and_comment = raw_instruction_and_comment.trim().split_whitespace().collect::<String>();
-        if instruction_and_comment == "" { continue; }
+        let instruction_and_comment = raw_instruction_and_comment.split_whitespace().collect::<String>();
+        if instruction_and_comment.is_empty() { continue; }
 
-        let instruction = if let Some((instruction, _)) = instruction_and_comment.split_once(";") {
+        let instruction = if let Some((instruction, _)) = instruction_and_comment.split_once(';') {
             instruction
         } else {
             &instruction_and_comment as &str
@@ -158,7 +158,7 @@ fn main() -> Result<()> {
             };
         }
 
-        if instruction == "" {
+        if instruction.is_empty() {
             output.push_str(&format!("{}\n", raw_instruction_and_comment));
         } else if instruction == "NOP" {
             output.push_str(&format!("69 00 00 00 ; {raw_instruction_and_comment}\n"));

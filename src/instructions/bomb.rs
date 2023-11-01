@@ -31,6 +31,6 @@ impl Instruction for Bomb {
 
 impl Display for Bomb {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{} {} 00", make_instruction_number(self.instruction_number).unwrap(), imm_dec_to_hex!(self.imm1)))
+        write!(f, "{} {} 00", make_instruction_number(self.instruction_number).unwrap(), imm_dec_to_hex!(self.imm1))
     }
 }

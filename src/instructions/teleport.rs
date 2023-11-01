@@ -40,6 +40,6 @@ impl Instruction for Teleport {
 
 impl Display for Teleport {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{} {} {:02X}", make_instruction_number(self.instruction_number).unwrap(), imm_dec_to_hex!(self.imm1), self.imm2))
+        write!(f, "{} {} {:02X}", make_instruction_number(self.instruction_number).unwrap(), imm_dec_to_hex!(self.imm1), self.imm2)
     }
 }

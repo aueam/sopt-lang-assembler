@@ -1,7 +1,7 @@
 use regex::Regex;
 
 pub fn make_instruction_number(number: u8) -> Option<String> {
-    return if number < 10 {
+    if number < 10 {
         Some(format!("0{number}"))
     } else if number > 99 {
         None

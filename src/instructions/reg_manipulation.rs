@@ -21,7 +21,7 @@ impl Instruction for RegManipulation {
                 if reg1 == "reg0" { return Err(CannotWriteIntoReg0); }
                 if reg1.is_empty() { return Err(MissingReg1); }
                 let reg1_number = reg1.trim_start_matches("reg").parse::<u8>().map_err(|_| UnsupportedReg1(reg1.clone(), 1, 5))?;
-                if reg1_number < 1 || reg1_number > 5 { return Err(UnsupportedReg1(reg1, 1, 5)); }
+                if !(1..=5).contains(&reg1_number) { return Err(UnsupportedReg1(reg1, 1, 5)); }
                 reg1_number
             } else { return Err(MissingReg1); };
 
@@ -50,6 +50,6 @@ impl Instruction for RegManipulation {
 
 impl Display for RegManipulation {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1)))
+        write!(f, "{} {}{} {}", make_instruction_number(self.instruction_number).unwrap(), self.reg1, self.reg2, imm_dec_to_hex!(self.imm1))
     }
 }

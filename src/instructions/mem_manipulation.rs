@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use regex::Regex;
 use crate::imm_dec_to_hex;
-use crate::instructions::{Instruction, ParseError};
+use crate::instructions::ParseError;
 use crate::instructions::helpers::make_instruction_number;
 use crate::instructions::ParseError::{CannotWriteIntoReg0, MissingImm1, MissingReg1, MissingReg2, RegexDoesNotMatch, UnsupportedImm1, UnsupportedReg1, UnsupportedReg2};
 
