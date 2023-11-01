@@ -24,8 +24,30 @@ you can generate byte code:
 11 00 00 02 ; if (reg0 == reg0) pc -= 2
 ```
 
-## Error reporting examples
+## How to build
+
+1. download [Rust](https://www.rust-lang.org/)
+2. download [repo](https://github.com/aueam/sopt-lang-assembler) with `git clone https://github.com/aueam/sopt-lang-assembler`
+3. go to `cd sopt-lang-assembler`
+4. build assembler with `cargo build --release`
+5. you can copy binary `cp target/release/sopt-lang-assembler`
+
+## How to use
+
+1. write your program into `program.sop`
+2. use the tool with `./sopt-lang-assembler program.sop output.tik`
+3. submit `output.tik`
+4. earn 10 points :)
+
+## Error handling examples
 
 ![img.png](img.png)
 
 ![img_1.png](img_1.png)
+
+
+
+
+
+
+ 
