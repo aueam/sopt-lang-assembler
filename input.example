@@ -1,0 +1,51 @@
+;comment
+NOP ; comment
+; comment
+
+NOP
+
+reg1 += reg3 + 99
+ADD (reg1, reg3, 99)
+ADD reg1, reg3, 99
+
+reg1 -= reg3 + 99
+SUB (reg1, reg3, 99)
+SUB reg1, reg3, 99
+
+reg1 *= reg3 + 99
+MUL (reg1, reg3, 99)
+MUL reg1, reg3, 99
+
+reg1 = reg3 + 99
+MOV (reg1, reg3, 99)
+MOV reg1, reg3, 99
+
+LOAD (reg1, reg2, 16)
+LOAD reg1, reg2, 16
+
+STORE (reg1, reg2, 16)
+STORE reg1, reg2, 16
+
+if (reg0 == reg0) pc += 1
+JUMP (reg1, reg2, 16)
+JUMP reg1, reg2, 16
+
+if (reg0 == reg0) pc -= 1
+REVJUMP (reg1, reg2, 16)
+REVJUMP reg1, reg2, 16
+
+if (reg0 < reg0) pc += 1
+LTJUMP (reg1, reg2, 16)
+LTJUMP reg1, reg2, 16
+
+if (reg0 < reg0) pc -= 1
+REVLTJUMP (reg1, reg2, 16)
+REVLTJUMP reg1, reg2, 16
+
+if (reg0 != reg0) pc += 1
+NEQJUMP (reg1, reg2, 16)
+NEQJUMP reg1, reg2, 16
+
+if (reg0 != reg0) pc -= 1
+REVNEQJUMP (reg1, reg2, 16)
+REVNEQJUMP reg1, reg2, 16
