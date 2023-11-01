@@ -10,7 +10,7 @@ Sopt lang is custom language made for the [FIKS competition](https://fiks.fit.cv
 2. download [repo](https://github.com/aueam/sopt-lang-assembler) with `git clone https://github.com/aueam/sopt-lang-assembler`
 3. go to `cd sopt-lang-assembler`
 4. build assembler with `cargo build --release`
-5. you can copy binary `cp target/release/sopt-lang-assembler`
+5. you can copy binary `cp target/release/sopt-lang-assembler .`
 
 # How to use
 
