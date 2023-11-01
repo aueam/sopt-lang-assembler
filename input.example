@@ -23,8 +23,8 @@ MOV reg1, reg3, 99
 LOAD (reg1, reg2, 16)
 LOAD reg1, reg2, 16
 
-STORE (reg1, reg2, 16)
-STORE reg1, reg2, 16
+STORE (reg1, 16, reg2)
+STORE reg1, 16, reg2
 
 if (reg0 == reg0) pc += 1
 JUMP (reg1, reg2, 16)
@@ -49,3 +49,9 @@ NEQJUMP reg1, reg2, 16
 if (reg0 != reg0) pc -= 1
 REVNEQJUMP (reg1, reg2, 16)
 REVNEQJUMP reg1, reg2, 16
+
+TELEPORT (17, 17)
+TELEPORT 17, 17
+
+BOMB (100)
+BOMB 100
