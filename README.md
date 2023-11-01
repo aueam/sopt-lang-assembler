@@ -48,7 +48,7 @@ So what can you do with this tool?
 After you write code:
 ```
 NOP
-reg1 += reg0 + 1
+reg1 += reg0 + 42
 if (reg0 == reg0) pc -= 2
 ```
 _(all possible instruction formats can be found [here](input.example))_
@@ -57,6 +57,6 @@ you can generate byte code:
 
 ```
 69 00 00 00 ; NOP
-01 10 00 01 ; reg1 += reg0 + 1
+01 10 00 2A ; reg1 += reg0 + 42
 11 00 00 02 ; if (reg0 == reg0) pc -= 2
 ```
