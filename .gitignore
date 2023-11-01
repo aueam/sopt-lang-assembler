@@ -3,4 +3,4 @@
 Cargo.lock
 *.sop
 *.tik
-sopt-lang
+sopt-lang-assembler
