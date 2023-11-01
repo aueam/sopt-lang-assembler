@@ -14,6 +14,7 @@ use crate::instructions::helpers::matches;
 use crate::instructions::jumps::Jump;
 use crate::instructions::mem_manipulation::MemManipulation;
 use crate::instructions::reg_manipulation::RegManipulation;
+use crate::instructions::set_imms::SetImm;
 use crate::instructions::teleport::Teleport;
 
 fn main() -> Result<()> {
@@ -112,8 +113,16 @@ fn main() -> Result<()> {
         Regex::new(r"^REVNEQJUMP(.*),(.*),(.*)").context("can not create regex for REVNEQJUMP3")?,
     ];
 
-    // let setimmlow = Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW")?;
-    // let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
+    let set_imm_low_regexes = vec![
+        Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW1")?,
+        Regex::new(r"^SETIMMLOW\((.*),(.*)\)").context("can not create regex for SETIMMLOW2")?,
+        Regex::new(r"^SETIMMLOW(.*),(.*)").context("can not create regex for SETIMMLOW3")?
+    ];
+    let set_imm_high_regexes = vec![
+        Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH1")?,
+        Regex::new(r"^SETIMMHIGH\((.*),(.*)\)").context("can not create regex for SETIMMHIGH2")?,
+        Regex::new(r"^SETIMMHIGH(.*),(.*)").context("can not create regex for SETIMMHIGH3")?
+    ];
 
     let teleport_regexes = vec![
         Regex::new(r"^TELEPORT\((.*),(.*)\)").context("can not create regex for TELEPORT")?,
@@ -195,6 +204,16 @@ fn main() -> Result<()> {
             process_jump_instruction!(instruction, matched_regex, 14, output, problem_line);
         } else if let Some(matched_regex) = matches(instruction, &rev_neq_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 15, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &set_imm_low_regexes) {
+            match SetImm::parse(instruction, matched_regex, 20) {
+                Ok(low) => output.push_str(&format!("{} ; {}\n", low, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &20))),
+            }
+        } else if let Some(matched_regex) = matches(instruction, &set_imm_high_regexes) {
+            match SetImm::parse(instruction, matched_regex, 21) {
+                Ok(high) => output.push_str(&format!("{} ; {}\n", high, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &21))),
+            }
         } else if let Some(matched_regex) = matches(instruction, &bomb_regexes) {
             match Bomb::parse(instruction, matched_regex, 50) {
                 Ok(bomb) => output.push_str(&format!("{} ; {}\n", bomb, raw_instruction_and_comment)),

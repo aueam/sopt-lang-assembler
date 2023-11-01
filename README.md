@@ -34,8 +34,8 @@ Sopt lang is custom language made for the [FIKS competition](https://fiks.fit.cv
 - [x] REVLTJUMP
 - [x] NEQJUMP
 - [x] REVNEQJUMP
-- [ ] SETIMMLOW
-- [ ] SETIMMHIGH
+- [x] SETIMMLOW
+- [x] SETIMMHIGH
 - [x] TELEPORT
 - [x] BOMB
 

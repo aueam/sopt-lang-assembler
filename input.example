@@ -50,6 +50,14 @@ if (reg0 != reg0) pc -= 1
 REVNEQJUMP (reg1, reg2, 16)
 REVNEQJUMP reg1, reg2, 16
 
+reg1[low] = 5
+SETIMMLOW (reg1, 5)
+SETIMMLOW reg1, 5
+
+reg1[high] = 5
+SETIMMHIGH (reg1, 5)
+SETIMMHIGH reg1, 5
+
 TELEPORT (17, 17)
 TELEPORT 17, 17
 

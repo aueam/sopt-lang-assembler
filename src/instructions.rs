@@ -6,7 +6,7 @@ use crate::instructions::helpers::{make_instruction_number, replace_first, repla
 pub mod jumps;
 pub mod reg_manipulation;
 pub mod mem_manipulation;
-pub mod set_mins;
+pub mod set_imms;
 pub mod teleport;
 pub mod bomb;
 pub mod helpers;
