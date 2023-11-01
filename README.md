@@ -14,7 +14,7 @@ Sopt lang is custom language made for the [FIKS competition](https://fiks.fit.cv
 
 # How to use
 
-1. write your program into `program.sop`
+1. write your [code](#examples) into `program.sop`
 2. use the tool with `./sopt-lang-assembler program.sop output.tik`
 3. submit `output.tik`
 4. earn 10 points :)
