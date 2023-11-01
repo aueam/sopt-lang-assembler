@@ -7,8 +7,10 @@ use std::process::exit;
 use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
 use regex::Regex;
-use crate::instructions::{Instruction, ParseError};
-use crate::instructions::helpers::make_instruction_number;
+use crate::instructions::Instruction;
+use crate::instructions::build_error;
+use crate::instructions::bomb::Bomb;
+use crate::instructions::helpers::matches;
 use crate::instructions::jumps::Jump;
 use crate::instructions::mem_manipulation::MemManipulation;
 use crate::instructions::reg_manipulation::RegManipulation;
@@ -40,7 +42,7 @@ fn main() -> Result<()> {
     sop_file.read_to_string(&mut input).context("cannot read input file to string")?;
 
     if let Ok(_) = File::open(tik_raw_file) {
-        return Err(anyhow!(".tik file already exists"));
+        return Err(anyhow!(format!("{} file already exists", tik_raw_file)));
     }
 
     let add_regexes = vec![
@@ -81,29 +83,29 @@ fn main() -> Result<()> {
         Regex::new(r"^JUMP\((.*),(.*),(.*)\)").context("can not create regex for JUMP2")?,
         Regex::new(r"^JUMP(.*),(.*),(.*)").context("can not create regex for JUMP3")?,
     ];
-    let revjump_regexes = vec![
+    let rev_jump_regexes = vec![
         Regex::new(r"^if\((.*)==(.*)\)pc-=(.*)").context("can not create regex for REVJUMP1")?,
         Regex::new(r"^REVJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVJUMP2")?,
         Regex::new(r"^REVJUMP(.*),(.*),(.*)").context("can not create regex for REVJUMP3")?,
     ];
 
-    let ltjump_regexes = vec![
+    let lt_jump_regexes = vec![
         Regex::new(r"^if\((.*)<(.*)\)pc\+=(.*)").context("can not create regex for LTJUMP1")?,
         Regex::new(r"^LTJUMP\((.*),(.*),(.*)\)").context("can not create regex for LTJUMP2")?,
         Regex::new(r"^LTJUMP(.*),(.*),(.*)").context("can not create regex for LTJUMP3")?,
     ];
-    let revltjump_regexes = vec![
+    let rev_lt_jump_regexes = vec![
         Regex::new(r"^if\((.*)<(.*)\)pc-=(.*)").context("can not create regex for REVLTJUMP1")?,
         Regex::new(r"^REVLTJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVLTJUMP2")?,
         Regex::new(r"^REVLTJUMP(.*),(.*),(.*)").context("can not create regex for REVLTJUMP3")?,
     ];
 
-    let neqjump_regexes = vec![
+    let neq_jump_regexes = vec![
         Regex::new(r"^if\((.*)!=(.*)\)pc\+=(.*)").context("can not create regex for NEQJUMP1")?,
         Regex::new(r"^NEQJUMP\((.*),(.*),(.*)\)").context("can not create regex for NEQJUMP2")?,
         Regex::new(r"^NEQJUMP(.*),(.*),(.*)").context("can not create regex for NEQJUMP3")?,
     ];
-    let revneqjump_regexes = vec![
+    let rev_neq_jump_regexes = vec![
         Regex::new(r"^if\((.*)!=(.*)\)pc-=(.*)").context("can not create regex for REVNEQJUMP1")?,
         Regex::new(r"^REVNEQJUMP\((.*),(.*),(.*)\)").context("can not create regex for REVNEQJUMP2")?,
         Regex::new(r"^REVNEQJUMP(.*),(.*),(.*)").context("can not create regex for REVNEQJUMP3")?,
@@ -112,8 +114,15 @@ fn main() -> Result<()> {
     let setimmlow = Regex::new(r"(.*)\[low]=(.*)").context("can not create regex for SETIMMLOW")?;
     let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
 
-    let teleport = Regex::new(r"teleport(.*),(.*)").context("can not create regex for TELEPORT")?;
-    let bomb = Regex::new(r"bomb(.*)").context("can not create regex for BOMB")?;
+    let teleport_regexes = vec![
+        Regex::new(r"^TELEEPORT\((.*),(.*)\)").context("can not create regex for TELEPORT")?,
+        Regex::new(r"^TELEEPORT(.*),(.*)").context("can not create regex for TELEPORT")?,
+    ];
+
+    let bomb_regexes = vec![
+        Regex::new(r"^BOMB(.*)").context("can not create regex for BOMB1")?,
+        Regex::new(r"^BOMB\((.*)\)").context("can not create regex for BOMB2")?
+    ];
 
     let instructions: Vec<&str> = input.split("\n").collect();
     let mut output = String::new();
@@ -121,9 +130,11 @@ fn main() -> Result<()> {
     for (index, raw_instruction_and_comment) in instructions.iter().enumerate() {
         let instruction_and_comment = raw_instruction_and_comment.trim().split_whitespace().collect::<String>();
         if instruction_and_comment == "" { continue; }
-        let (instruction, comment): (&str, Option<&str>) = match instruction_and_comment.split_once(";") {
-            None => (&instruction_and_comment, None),
-            Some((instruction, comment)) => (instruction, Some(comment))
+
+        let instruction = if let Some((instruction, _)) = instruction_and_comment.split_once(";") {
+            instruction
+        } else {
+            &instruction_and_comment as &str
         };
 
         let problem_line = format!("{}. {raw_instruction_and_comment}", index + 1);
@@ -170,100 +181,23 @@ fn main() -> Result<()> {
             }
         } else if let Some(matched_regex) = matches(instruction, &jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 10, output, problem_line);
-        } else if let Some(matched_regex) = matches(instruction, &revjump_regexes) {
+        } else if let Some(matched_regex) = matches(instruction, &rev_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 11, output, problem_line);
-        } else if let Some(matched_regex) = matches(instruction, &ltjump_regexes) {
+        } else if let Some(matched_regex) = matches(instruction, &lt_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 12, output, problem_line);
-        } else if let Some(matched_regex) = matches(instruction, &revltjump_regexes) {
+        } else if let Some(matched_regex) = matches(instruction, &rev_lt_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 13, output, problem_line);
-        } else if let Some(matched_regex) = matches(instruction, &neqjump_regexes) {
+        } else if let Some(matched_regex) = matches(instruction, &neq_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 14, output, problem_line);
-        } else if let Some(matched_regex) = matches(instruction, &revneqjump_regexes) {
+        } else if let Some(matched_regex) = matches(instruction, &rev_neq_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 15, output, problem_line);
         } else {
-            println!("{}", instruction);
-            panic!("unknown instruction");
+            let problem = format!("in your program on line:\n\n{}\n\nproblem: {}", problem_line, "unknown instruction".red());
+            return Err(anyhow!(problem));
         }
     }
 
     let mut tik_file = File::create(tik_raw_file).expect("can not create output file");
-
     tik_file.write_all(output.as_bytes()).context("failed to write program into .tik file")?;
-
     Ok(())
-}
-
-fn matches(instruction: &str, regexes: &Vec<Regex>) -> Option<Regex> {
-    for regex in regexes {
-        if regex.is_match(instruction) {
-            return Some(regex.clone());
-        }
-    }
-    None
-}
-
-fn build_error(err: ParseError, problem_line: String, instruction: &u8) -> String {
-    let mut problem = String::from("in your program on line:\n\n");
-
-    // println!("{:?}", err);
-    problem.push_str(&match err {
-        ParseError::CannotWriteIntoReg0 => {
-            format!(
-                "{}\n\nproblem: {}",
-                replace_first(&problem_line, "reg0", &"reg0".red().to_string()),
-                err.to_string().red().to_string()
-            )
-        }
-        ParseError::RegexDoesNotMatch | ParseError::MissingReg1 | ParseError::MissingReg2 | ParseError::MissingImm1 | ParseError::MissingImm2 => {
-            format!("{}\n\nproblem: {}", problem_line, err.to_string().red().to_string())
-        }
-        ParseError::UnsupportedReg1(ref invalid_reg, _, _) => {
-            format!(
-                "{}\n\nproblem: {}",
-                replace_first(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
-                err.to_string().red().to_string()
-            )
-        }
-        ParseError::UnsupportedReg2(ref invalid_reg, _, _) => {
-            format!(
-                "{}\n\nproblem: {}",
-                replace_last(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
-                err.to_string().red().to_string()
-            )
-        }
-        ParseError::UnsupportedImm1(ref invalid_imm, _) => {
-            format!(
-                "{}\n\nproblem: {}",
-                replace_first(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
-                err.to_string().red().to_string()
-            )
-        }
-        ParseError::UnsupportedImm2(ref invalid_imm, _) => {
-            format!(
-                "{}\n\nproblem: {}",
-                replace_last(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
-                err.to_string().red().to_string()
-            )
-        }
-    });
-    problem.push_str(&format!("\ninstruction found: {}", make_instruction_number(*instruction).unwrap()));
-    problem
-}
-
-fn replace_first(input: &str, from: &str, to: &str) -> String {
-    if let Some(index) = input.find(from) {
-        let (before, after) = input.split_at(index);
-        format!("{}{}{}", before, to, &after[from.len()..])
-    } else {
-        input.to_string()
-    }
-}
-
-fn replace_last(input: &str, from: &str, to: &str) -> String {
-    if let Some(index) = input.rfind(from) {
-        let (before, after) = input.split_at(index);
-        format!("{}{}{}", before, to, &after[from.len()..])
-    } else {
-        input.to_string()
-    }
 }

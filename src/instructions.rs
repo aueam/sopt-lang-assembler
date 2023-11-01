@@ -1,5 +1,7 @@
 use std::fmt::{Display, Formatter};
+use colored::Colorize;
 use regex::Regex;
+use crate::instructions::helpers::{make_instruction_number, replace_first, replace_last};
 
 pub mod jumps;
 pub mod reg_manipulation;
@@ -47,3 +49,50 @@ impl Display for ParseError {
     }
 }
 
+pub fn build_error(err: ParseError, problem_line: String, instruction: &u8) -> String {
+    let mut problem = String::from("in your program on line:\n\n");
+
+    // println!("{:?}", err);
+    problem.push_str(&match err {
+        ParseError::CannotWriteIntoReg0 => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, "reg0", &"reg0".red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::RegexDoesNotMatch | ParseError::MissingReg1 | ParseError::MissingReg2 | ParseError::MissingImm1 | ParseError::MissingImm2 => {
+            format!("{}\n\nproblem: {}", problem_line, err.to_string().red().to_string())
+        }
+        ParseError::UnsupportedReg1(ref invalid_reg, _, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedReg2(ref invalid_reg, _, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_last(&problem_line, &invalid_reg, &invalid_reg.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedImm1(ref invalid_imm, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_first(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+        ParseError::UnsupportedImm2(ref invalid_imm, _) => {
+            format!(
+                "{}\n\nproblem: {}",
+                replace_last(&problem_line, &invalid_imm, &invalid_imm.red().to_string()),
+                err.to_string().red().to_string()
+            )
+        }
+    });
+    problem.push_str(&format!("\ninstruction found: {}", make_instruction_number(*instruction).unwrap()));
+    problem
+}
