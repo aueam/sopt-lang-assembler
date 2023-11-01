@@ -14,6 +14,7 @@ use crate::instructions::helpers::matches;
 use crate::instructions::jumps::Jump;
 use crate::instructions::mem_manipulation::MemManipulation;
 use crate::instructions::reg_manipulation::RegManipulation;
+use crate::instructions::teleport::Teleport;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -115,13 +116,13 @@ fn main() -> Result<()> {
     let setimmhigh = Regex::new(r"(.*)\[high]=(.*)").context("can not create regex for SETIMMHIGH")?;
 
     let teleport_regexes = vec![
-        Regex::new(r"^TELEEPORT\((.*),(.*)\)").context("can not create regex for TELEPORT")?,
-        Regex::new(r"^TELEEPORT(.*),(.*)").context("can not create regex for TELEPORT")?,
+        Regex::new(r"^TELEPORT\((.*),(.*)\)").context("can not create regex for TELEPORT")?,
+        Regex::new(r"^TELEPORT(.*),(.*)").context("can not create regex for TELEPORT")?,
     ];
 
     let bomb_regexes = vec![
-        Regex::new(r"^BOMB(.*)").context("can not create regex for BOMB1")?,
-        Regex::new(r"^BOMB\((.*)\)").context("can not create regex for BOMB2")?
+        Regex::new(r"^BOMB\((.*)\)").context("can not create regex for BOMB2")?,
+        Regex::new(r"^BOMB(.*)").context("can not create regex for BOMB1")?
     ];
 
     let instructions: Vec<&str> = input.split("\n").collect();
@@ -191,6 +192,16 @@ fn main() -> Result<()> {
             process_jump_instruction!(instruction, matched_regex, 14, output, problem_line);
         } else if let Some(matched_regex) = matches(instruction, &rev_neq_jump_regexes) {
             process_jump_instruction!(instruction, matched_regex, 15, output, problem_line);
+        } else if let Some(matched_regex) = matches(instruction, &bomb_regexes) {
+            match Bomb::parse(instruction, matched_regex, 50) {
+                Ok(bomb) => output.push_str(&format!("{} ; {}\n", bomb, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &50))),
+            }
+        } else if let Some(matched_regex) = matches(instruction, &teleport_regexes) {
+            match Teleport::parse(instruction, matched_regex, 42) {
+                Ok(teleport) => output.push_str(&format!("{} ; {}\n", teleport, raw_instruction_and_comment)),
+                Err(err) => return Err(anyhow!(build_error(err, problem_line, &42))),
+            }
         } else {
             let problem = format!("in your program on line:\n\n{}\n\nproblem: {}", problem_line, "unknown instruction".red());
             return Err(anyhow!(problem));
