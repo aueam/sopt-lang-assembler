@@ -130,7 +130,10 @@ fn main() -> Result<()> {
 
     for (index, raw_instruction_and_comment) in instructions.iter().enumerate() {
         let instruction_and_comment = raw_instruction_and_comment.split_whitespace().collect::<String>();
-        if instruction_and_comment.is_empty() { continue; }
+        if instruction_and_comment.is_empty() {
+            output.push('\n');
+            continue;
+        }
 
         let instruction = if let Some((instruction, _)) = instruction_and_comment.split_once(';') {
             instruction
